@@ -7,18 +7,17 @@ Created on 29/8/2023
     Anders L. Andreasen, ala@mpe.au.dk
     
 Description:
-    Example case based on the North Sea Energy Island. Consists of an island 
-    with wind, P2X and storage capacity, connected to several countries.
-    This example include custom constraints being defined using extra_func.
+    Example case based on the pypsa example "Meshed AC-DC" from:
+    https://pypsa.readthedocs.io/en/latest/examples/ac-dc-lopf.html
 """
 
 import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D
 import numpy as np
 import yaml
-# from pypsa_netview.draw import draw_network
 
 
+#Setting __name__ to properly handle multiprocessing
 if __name__ == '__main__':
     
     # Create or load network
@@ -31,9 +30,9 @@ if __name__ == '__main__':
         
         
     # Set MAA variables to explore
-    variables = {'x1': ['Generator',
-                       ['wind'],
-                       'p_nom',],
+    variables = {'x1': ['Generator', # Component type
+                       ['wind'],     # Carrier(s)
+                       'p_nom',],    # Component variable to explore
                  'x2': ['Generator',
                        ['gas'],
                        'p_nom',]
@@ -54,9 +53,6 @@ if __name__ == '__main__':
     
     # PyMGA: Solve optimal system
     opt_sol, obj, n_solved = method.find_optimum()
-    
-    # Draw optimal system (optional)
-    # draw_network(n_solved, show_capacities = True)
     
     # PyMGA: Search near-optimal space using chosen method
     verticies, directions, _, _ = method.search_directions(14, n_workers = 16)

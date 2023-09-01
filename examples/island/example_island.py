@@ -16,14 +16,13 @@ import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D
 import numpy as np
 import yaml
-# from pypsa_netview.draw import draw_network
 import pandas as pd
 
 
 if __name__ == '__main__':
     
     # Create or load network
-    network = 'island_example_network.nc'
+    network = 'example_island_network.nc'
     
     # Define total island area
     total_area = 0.5*120_000 #[m^2]
@@ -57,55 +56,73 @@ if __name__ == '__main__':
     def extra_func(n, snapshots):
         
         ### Define custom constraints
-        # Define total link capacity constraint
         def link_constraint(n):
-            # Create a constraint that limits the sum of link capacities
             from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
+            '''
+            This function sets an upper limit for the sum of link capacities.
+            '''
             
-            # Get link info from network
+            # Chosen Link names
             link_names = ['Island_to_Denmark', 'Island_to_Norway', 'Island_to_Germany',
                           'Island_to_Netherlands', 'Island_to_Belgium',
-                          'Island_to_United Kingdom']               # List of main link names
-            link_t     = 3_000           # Maximum total link capacity
+                          'Island_to_United Kingdom']               
             
-            # Get all link variables, and filter for only main link variables
+            # Get all link variables, and filter for only chosen links
             vars_links   = get_var(n, 'Link', 'p_nom')
             vars_links   = vars_links[link_names]
             
-            # Sum up link capacities of chosen links (lhs), and set limit (rhs)
-            rhs          = link_t
-            lhs          = join_exprs(linexpr((1, vars_links)))
+            # Set up left and right side of constraint
+            rhs          = 3_000 # [MW] Maximum total link capacity
+            lhs          = join_exprs(linexpr((1, vars_links))) #Sum of all link capacities
             
-            #Define constraint and name it 'Total constraint'
+            # Define constraint and name it 'Sum constraint'
             define_constraints(n, lhs, '<=', rhs, 'Link', 'Sum constraint')
           
-        # Define constraint forcing links to/from a country to have same capacity
+        
         def marry_links(n):
-            from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
+            from pypsa.linopt import get_var, linexpr, define_constraints
+            '''
+            Each country has a link to and from the island. This constraint
+            ensures that these links behave as bidirectional links by 
+            constraining the to always have the same capacity. 
+            This is done for each country.
+            '''
             
+            # Get all link varuables
             vars_links   = get_var(n, 'Link', 'p_nom')
             
-            if not hasattr(n, 'connected_countries'):
-                n.connected_countries =  [
-                                        "Denmark",         
-                                        "Norway",          
-                                        "Germany",         
-                                        "Netherlands",     
-                                        "Belgium",         
-                                        "United Kingdom"
-                                        ]
+            # List of countries to which the island is connected.
+            connected_countries =  [
+                                    "Denmark",         
+                                    "Norway",          
+                                    "Germany",         
+                                    "Netherlands",     
+                                    "Belgium",         
+                                    "United Kingdom"
+                                    ]
             
-            for country in n.connected_countries:
+            # loop through countries and define constraints
+            for country in connected_countries:
                 
+                # Define left side as the capacity of the link from the island
+                # minus the capacity of the link to the island.
                 lhs = linexpr((1, vars_links['Island_to_' + country]),
                               (-1, vars_links[country + '_to_Island']))
                 
-                define_constraints(n, lhs, '=', 0, 'Link', country + '_link_capacity_constraint')
+                # Set up right side to be 0. forcing lnks to be equal
+                rhs = 0
+                
+                # Set up constraint
+                define_constraints(n, lhs, '=', rhs, 'Link', country + '_link_capacity_constraint')
         
-        # Define area constraint affecting P2X, Data and Storage on island
+        
         def area_constraint(n):
-            # Get variables for all generators and store
             from pypsa.linopt import get_var, linexpr, define_constraints
+            '''
+            This function constrains the area available to the technologies
+            on the island. This is done by multiplying the area use [m^2/MW] 
+            with the capacity for each technology taking up space on the island.
+            '''
             
             # Get variables to include in constraint
             vars_gen   = get_var(n, 'Generator', 'p_nom')
@@ -118,7 +135,7 @@ if __name__ == '__main__':
                            (area_use['storage'],  vars_store['Storage'])
                           )
             
-            # Define area use limit
+            # Define right side as total area
             rhs = total_area #[m^2]
             
             # Define constraint
@@ -157,8 +174,8 @@ if __name__ == '__main__':
                                            directions = directions, 
                                            verticies = verticies)
 
-#
-    #### Processing results ####
+
+    #### Process results ####
     # Plot near-optimal space of Data and P2X
     all_variables    = list(variables.keys())
     chosen_variables = ['x1', 'x2']
