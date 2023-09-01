@@ -12,21 +12,12 @@ Description:
     This example include custom constraints being defined using extra_func.
 """
 
-import os
-import sys
-
-# Add parent folder to directory to load PyMGA package
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(parent_dir)
-
 import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D
 import numpy as np
 import yaml
-import matplotlib.pyplot as plt
-from pypsa_netview.draw import draw_network
+# from pypsa_netview.draw import draw_network
 import pandas as pd
-from ttictoc import tic, toc
 
 
 if __name__ == '__main__':
@@ -60,17 +51,6 @@ if __name__ == '__main__':
                         ['Storage'],
                         'e_nom',]
                         } 
-    
-    # variables = {'x1': ['Link',
-    #                     ['Island_to_Denmark'],
-    #                     'p_nom',],
-    #             'x2': ['Link',
-    #                     ['Island_to_Norway'],
-    #                     'p_nom',],
-    #             'x3': ['Link',
-    #                     ['Island_to_Belgium'],
-    #                     'p_nom',]
-    #                     } 
     
     
     # Define constraints to be passed to extra_functionalities in n.lopf()
@@ -167,12 +147,10 @@ if __name__ == '__main__':
     opt_sol, obj, n_solved = method.find_optimum()
     
     # Draw optimal system (optional)
-    draw_network(n_solved, show_capacities = True)
+    # draw_network(n_solved, show_capacities = True)
     
     # PyMGA: Search near-optimal space using chosen method
-    tic()
-    verticies, directions, _, _ = method.search_directions(7, n_workers = 16)
-    print(toc())
+    verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
 
     # PyMGA: Sample the identified near-optimal space
     MAA_samples = PyMGA.sampler.har_sample(100_000, x0 = np.zeros(len(variables.keys())), 
