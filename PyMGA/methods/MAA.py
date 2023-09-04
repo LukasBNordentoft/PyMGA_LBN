@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import time
 from scipy.spatial import ConvexHull
 from ..utilities.general import solve_direcitons
 from ..utilities.dask_helpers import start_dask_cluster
@@ -16,12 +17,20 @@ class MAA:
         """ 
         """
         # Finding optimal solution
+        print('\n PyMGA: Finding optimal system \n')
+        start_time = time.time()
         self.obj, opt_sol, n_solved = self.case.solve()
         self.opt_sol = list(opt_sol.values())[:self.dim]
+        end_time = time.time()
+        print(f'\n PyMGA: Optimal system found \n obj. value: {round(self.obj,2)} \n Time used: {round(end_time - start_time,2)}\n')
 
         return self.opt_sol, self.obj, n_solved
 
     def search_directions(self, n_samples, n_workers=4, max_iter=20):
+        
+        print('\n PyMGA: Searching near-optimal space using MAA method \n')
+        start_time = time.time()
+        
         dim = self.dim
         dim_fullD = dim
 
@@ -88,8 +97,11 @@ class MAA:
             old_volume = hull.volume
             epsilon = delta_v/hull.volume
 
-            print(f"""Itteration #{i},
+            print(f"""Iteration #{i},
                     total verticies {len(verticies)},
                     eps: {epsilon:.2f}""")
+                    
+        end_time = time.time()
+        print(f'\n PyMGA: Finished searching using MAA method \n Time used: {round(end_time - start_time,2)} s \n')
 
         return verticies, directions_searched, stat, cost

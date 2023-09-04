@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import time
 from ..utilities.general import (solve_direcitons,
                                  DirectionSampler,
                                  check_large_volume,
@@ -20,8 +21,12 @@ class bMAA:
         """ 
         """
         # Finding optimal solution
+        start_time = time.time()
+        print('\n PyMGA: Finding optimal system \n')
         self.obj, opt_sol, n_solved = self.case.solve()
         self.opt_sol = list(opt_sol.values())[:self.dim]
+        end_time = time.time()
+        print(f'\n PyMGA: Optimal system found \n obj. value: {round(self.obj,2)} \n Time used: {round(end_time - start_time,2)}\n')
 
         return self.opt_sol, self.obj, n_solved
     
@@ -31,6 +36,9 @@ class bMAA:
                           n_workers=4,
                           max_iter=30,
                           tol=0.99):
+        print('\n PyMGA: Searching near-optimal space using bMAA method \n')
+        start_time = time.time()
+        
         dim = self.dim
         dim_fullD = dim
 
@@ -106,7 +114,7 @@ class bMAA:
 
             acc_rate = np.mean(acc_small)
 
-            print(f"""Itteration #{i},
+            print(f"""Iteration #{i},
                    total verticies {len(directions)},
                    acceptance rate {acc_rate:.3f}""")
 
@@ -116,6 +124,10 @@ class bMAA:
             if len(directions) >= n_samples:
                 print('Max function evaluations reached. Stopping')
                 break
+            
+        end_time = time.time()
+        print(f'\n PyMGA: Finished searching using bMAA method \n Time used: {round(end_time - start_time,2)} s \n')
+            
         return verticies, directions, stat, cost
 
 
