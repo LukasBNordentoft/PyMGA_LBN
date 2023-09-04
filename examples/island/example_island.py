@@ -13,7 +13,7 @@ Description:
 """
 
 import PyMGA
-from PyMGA.utilities.plot import near_optimal_space_2D
+from PyMGA.utilities.plot import near_optimal_space_2D, near_optimal_space_matrix
 import numpy as np
 import yaml
 import pandas as pd
@@ -151,11 +151,11 @@ if __name__ == '__main__':
     #### PyMGA ####
     # PyMGA: Build case from PyPSA network
     case = PyMGA.cases.PyPSA_to_case(config, 
-                                     network,
-                                     extra_func = extra_func,
-                                     variables = variables,
-                                     mga_slack = 0.1,
-                                     n_snapshots = 8760)
+                                      network,
+                                      extra_func = extra_func,
+                                      variables = variables,
+                                      mga_slack = 0.1,
+                                      n_snapshots = 8760)
     
     # PyMGA: Choose MAA method
     method = PyMGA.methods.MAA(case)
@@ -171,14 +171,20 @@ if __name__ == '__main__':
 
     # PyMGA: Sample the identified near-optimal space
     MAA_samples = PyMGA.sampler.har_sample(100_000, x0 = np.zeros(len(variables.keys())), 
-                                           directions = directions, 
-                                           verticies = verticies)
+                                            directions = directions, 
+                                            verticies = verticies)
 
 
     #### Process results ####
-    # Plot near-optimal space of Data and P2X
+    # Plot near-optimal space of Data (x1) and P2X (x2)
     all_variables    = list(variables.keys())
     chosen_variables = ['x1', 'x2']
     near_optimal_space_2D(all_variables, chosen_variables,
                           verticies, MAA_samples,
-                          plot_MAA_points = True,)
+                          plot_MAA_points = True,
+                          bins = 50)
+    
+    # Matrix plot of 2D "sides" of polytope, with histograms and correlations
+    near_optimal_space_matrix(all_variables, verticies, MAA_samples,
+                              xlabel = 'Unit []', ylabel = 'Unit []',
+                              opt_solution = opt_sol)
