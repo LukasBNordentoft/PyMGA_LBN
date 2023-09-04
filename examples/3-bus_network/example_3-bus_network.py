@@ -7,8 +7,7 @@ Created on 29/8/2023
     Anders L. Andreasen, ala@mpe.au.dk
     
 Description:
-    Example case based on the pypsa example "Meshed AC-DC" from:
-    https://pypsa.readthedocs.io/en/latest/examples/ac-dc-lopf.html
+    Exmple use of PyMGA to explore a network with 3 buses.
 """
 
 import PyMGA
