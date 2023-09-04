@@ -1,7 +1,7 @@
 import numpy as np
 from ..utilities.general import solve_direcitons, DirectionSampler
 from ..utilities.dask_helpers import start_dask_cluster
-# import time
+import time
 
 
 class MGA:
@@ -16,8 +16,12 @@ class MGA:
         Finds the cost optimal solution of the case object given
         """
         # Finding optimal solution
+        print('\n PyMGA: Finding optimal system \n')
+        start_time = time.time()
         self.obj, opt_sol, n_solved = self.case.solve()
         self.opt_sol = list(opt_sol.values())[:self.dim]
+        end_time = time.time()
+        print(f'\n PyMGA: Optimal system found \n obj. value: {round(self.obj,2)} \n Time used: {round(end_time - start_time,2)}\n')
 
         return self.opt_sol, self.obj, n_solved
 
@@ -27,6 +31,9 @@ class MGA:
         The method draws random search directions
         uniformly over the hypersphere.
         """
+
+        print('\n PyMGA: Searching near-optimal space using MGA method \n')
+        start_time = time.time()
 
         dim = self.dim
 
@@ -74,5 +81,7 @@ class MGA:
                                                                 sol_fullD,
                                                                 stat,
                                                                 cost)
+        end_time = time.time()
+        print(f'\n PyMGA: Finished searching using MGA method \n Time used: {round(end_time - start_time,2)} s \n')
 
         return verticies, directions, stat, cost
