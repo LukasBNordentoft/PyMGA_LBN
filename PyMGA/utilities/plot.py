@@ -49,12 +49,12 @@ def near_optimal_space_2D(all_variables, chosen_variables,
         pandas
     
     Args:
-        all_variables (list): Boundary points as n-dimensional numpy 
-                                    array of floats.
-        n_samples (float): Amount of samples to draw from the hull
+        all_variables (list): List of variables explored
+        chosen_variables(list): List of the two variables to plot
+        verticies (array): Boundary points as n-dimensional numpy array of floats.
+        samples (array): Samples as n-dimensional array of floats.
+        bins (int): Number of bins to use for pcolormesh
     
-    Returns:
-        sample
     '''
     
     set_options()
