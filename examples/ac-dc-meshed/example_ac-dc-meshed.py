@@ -10,6 +10,11 @@ Description:
     Example case based on the pypsa example "Meshed AC-DC" from:
     https://pypsa.readthedocs.io/en/latest/examples/ac-dc-lopf.html
 """
+# Add parent folder to directory to load PyMGA package
+import os
+import sys
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(parent_dir)
 
 import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D
@@ -39,7 +44,6 @@ if __name__ == '__main__':
                     } 
     
 
-
     #### PyMGA ####
     # PyMGA: Build case from PyPSA network
     case = PyMGA.cases.PyPSA_to_case(config, 
@@ -49,7 +53,7 @@ if __name__ == '__main__':
                                      n_snapshots = 10)
     
     # PyMGA: Choose MAA method
-    method = PyMGA.methods.bMAA(case)
+    method = PyMGA.methods.MAA(case)
     
     # PyMGA: Solve optimal system
     opt_sol, obj, n_solved = method.find_optimum()

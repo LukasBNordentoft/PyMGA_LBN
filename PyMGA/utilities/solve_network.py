@@ -126,7 +126,7 @@ def define_mga_constraint(n, sns, epsilon=None, with_fix=False):
         cost = (
             get_as_dense(n, c, "marginal_cost", sns)
             .loc[:, lambda ds: (ds != 0).all()]
-            .mul(n.snapshot_weightings.loc[sns,'objective'], axis=0)
+            # .mul(n.snapshot_weightings.loc[sns,'objective'], axis=0)
         )
         if cost.empty:
             continue

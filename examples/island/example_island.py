@@ -12,6 +12,12 @@ Description:
     This example include custom constraints being defined using extra_func.
 """
 
+# Add parent folder to directory to load PyMGA package
+import os
+import sys
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(parent_dir)
+
 import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D
 import numpy as np
@@ -48,8 +54,20 @@ if __name__ == '__main__':
                         'p_nom',],
                 'x3': ['Store',
                         ['Storage'],
-                        'e_nom',]
+                        'e_nom',],
+                'x4': ['Link',
+                        ['link_Denmark'],
+                        'p_nom',],
+                'x5': ['Link',
+                        ['link_Norway', 'link_Germany',
+                         'link_Netherlands', 'link_Belgium',
+                         'link_United Kingdom', 'AC'] ,
+                        'p_nom',],
+                'x6': ['Link',
+                        ['link_Norway'],
+                        'p_nom',],
                         } 
+    
     
     
     # Define constraints to be passed to extra_functionalities in n.lopf()
@@ -167,10 +185,13 @@ if __name__ == '__main__':
     # draw_network(n_solved, show_capacities = True)
     
     # PyMGA: Search near-optimal space using chosen method
+    from ttictoc import tic, toc
+    tic()
     verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
-
+    print(toc())
+#%%
     # PyMGA: Sample the identified near-optimal space
-    MAA_samples = PyMGA.sampler.har_sample(100_000, x0 = np.zeros(len(variables.keys())), 
+    MAA_samples = PyMGA.sampler.har_sample(1000_000, x0 = np.zeros(len(variables.keys())), 
                                            directions = directions, 
                                            verticies = verticies)
 
@@ -178,7 +199,8 @@ if __name__ == '__main__':
     #### Process results ####
     # Plot near-optimal space of Data and P2X
     all_variables    = list(variables.keys())
-    chosen_variables = ['x1', 'x2']
+    chosen_variables = ['x1', 'x5']
     near_optimal_space_2D(all_variables, chosen_variables,
                           verticies, MAA_samples,
-                          plot_MAA_points = True,)
+                          plot_MAA_points = True,
+                          bins = 50)
