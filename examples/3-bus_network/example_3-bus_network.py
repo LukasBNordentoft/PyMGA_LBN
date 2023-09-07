@@ -35,12 +35,12 @@ if __name__ == '__main__':
                  'x2': ['Generator',
                        ['coal'],
                        'p_nom',],
-                 'x3': ['Generator',
-                       ['solar'],
-                       'p_nom',],
-                 'x4': ['Store',
-                       ['battery'],
-                       'e_nom',],
+                  'x3': ['Generator',
+                        ['solar'],
+                        'p_nom',],
+                  'x4': ['Store',
+                        ['battery'],
+                        'e_nom',],
                     } 
     
 
@@ -60,25 +60,35 @@ if __name__ == '__main__':
     opt_sol, obj, n_solved = method.find_optimum()
 
     # PyMGA: Search near-optimal space using chosen method
-    verticies, directions, _, _ = method.search_directions(200, n_workers = 16)
-
+    verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
+    
     # PyMGA: Sample the identified near-optimal space
-    MAA_samples = PyMGA.sampler.har_sample(1000_000, x0 = np.zeros(len(variables.keys())), 
+    # Hit-and-run sampler, valid for all dimensions
+    har_samples = PyMGA.sampler.har_sample(1000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
+    # Bayesian bootstrap sampler, good up to aorund 8 dimensions
+    bayesian_samples = PyMGA.sampler.bayesian_sample(verticies, 1_000_000) 
 
 
     #### Processing results ####
-#
+
     # # Plot near-optimal space of Data and P2X
-    all_variables    = ['Wind', 'Coal', 'PV', 'Battery'] #list(variables.keys())
+    all_variables    = ['Wind', 'Coal', 
+                        'PV', 
+                        'Battery'
+                        ] #list(variables.keys())
     chosen_variables = ['Wind', 'Coal']
-    # near_optimal_space_2D(all_variables, chosen_variables,
-    #                       verticies, MAA_samples,
-    #                       plot_MAA_points = True,)
-    
+
     
     # Matrix plot of 2D "sides" of polytope, with histograms and correlations
-    near_optimal_space_matrix(all_variables, verticies, MAA_samples,
+    # Plot Hit-and-Run samples
+    near_optimal_space_matrix(all_variables, verticies, har_samples,
                               opt_solution = opt_sol,
                               title = 'Near-optimal space')
+    
+    # Plot Bayesian Bootstrap samples
+    near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
+                              opt_solution = opt_sol,
+                              title = 'Near-optimal space')
+     
