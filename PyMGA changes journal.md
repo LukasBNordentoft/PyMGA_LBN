@@ -1,5 +1,9 @@
 # PyMGA changes journal
 
+##### 08/09
+
+* **Created Bayesian Bootstrap sampler**
+
 ##### 01/09
 
 * **Created examples**
