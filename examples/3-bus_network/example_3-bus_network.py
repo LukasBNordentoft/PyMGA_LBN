@@ -10,6 +10,13 @@ Description:
     Exmple use of PyMGA to explore a network with 3 buses.
 """
 
+import os
+import sys
+
+# Add parent folder to directory to load PyMGA package
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(parent_dir)
+
 import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D, near_optimal_space_matrix
 import numpy as np
@@ -61,14 +68,14 @@ if __name__ == '__main__':
 
     # PyMGA: Search near-optimal space using chosen method
     verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
-    
+
     # PyMGA: Sample the identified near-optimal space
     # Hit-and-run sampler, valid for all dimensions
     har_samples = PyMGA.sampler.har_sample(1000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
     # Bayesian bootstrap sampler, good up to aorund 8 dimensions
-    bayesian_samples = PyMGA.sampler.bayesian_sample(verticies, 1_000_000) 
+    bayesian_samples = PyMGA.sampler.bayesian_sample( 1_000_000, verticies) 
 
 
     #### Processing results ####

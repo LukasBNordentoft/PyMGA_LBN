@@ -86,6 +86,7 @@ class PyPSA_to_case:
         except Exception as e:
             print('Error', e)
             pass
+        
 
     def read_network(self):
         # Create new network
@@ -98,6 +99,7 @@ class PyPSA_to_case:
         n.objective_optimum = self.objective_optimum
 
         return n
+    
 
     def solve(self):
         # Get network
@@ -105,21 +107,19 @@ class PyPSA_to_case:
         
         # Solve network with options from config.yaml file
 
-        
-        n, status = solve_network(n,
+        n_opt, status = solve_network(n,
                                   config=self.config['solving'],
                                   extra_func = self.extra_func
                                   )
             
-
         # Set objective optimum variable value
-        self.objective_optimum = n.objective
+        self.objective_optimum = n_opt.objective
 
         # Save variable values from network as variable
         all_variable_values = self.get_var_values(n)
-        n_solved = n
 
-        return n.objective, all_variable_values, n_solved
+        return n.objective, all_variable_values, n_opt
+    
 
     def search_direction(self, direction, variables=None):
         if variables is None:
@@ -158,6 +158,7 @@ class PyPSA_to_case:
                 status,
                 n.objective,
                 var_values)
+    
 
     def solve_point(self, point, variables=None):
         if variables is None:

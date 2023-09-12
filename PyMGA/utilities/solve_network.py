@@ -178,10 +178,6 @@ def define_mga_objective(n,snapshots,direction,options):
         
         # Filter by carrier
         mask = n.df(var_i[0]).carrier.isin(var_i[1])
-        # filter by country
-        if len(var_i)>3: 
-            mask = mask & n.df(var_i[0]).country.isin(var_i[3])
-
         model_vars = get_var(n,var_i[0],var_i[2])[mask]
         tmp_expr = linexpr((dir_i,model_vars)).sum()
         expr_list.append(tmp_expr)
@@ -292,7 +288,7 @@ def extra_functionality(n, snapshots, mga_options, direction, extra_func):
     
     # Add user defined constraints that were passed to pypsa_to_case
     if extra_func is not None:
-        extra_func(n, snapshots)
+        extra_func(n, snapshots, mga_options)
     
     
     # Implement MGA constraint 
