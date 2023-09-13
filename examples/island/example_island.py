@@ -49,10 +49,10 @@ if __name__ == '__main__':
         
     # Set MAA variables to explore
     variables = {'x1': ['Generator',
-                        ['Data'],
+                        ['P2X'],
                         'p_nom',],
                 'x2': ['Generator',
-                        ['P2X'],
+                        ['Data'],
                         'p_nom',],
                 'x3': ['Store',
                         ['Storage'],
@@ -150,107 +150,92 @@ if __name__ == '__main__':
             define_constraints(n, lhs, '<=', rhs, 'Island', 'Area_Use')
         
         # Define partial MGA constraints
-        if mga_options is not None:
-            if mga_options['mga_slack'] is not None:
+        def local_mga_constraint(n, snapshots, mga_options):
+            if mga_options is not None and mga_options['mga_slack'] is not None:
                 from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
                 
                 # Get MGA slack
                 epsilon = mga_options['mga_slack']
                 
-                # # Get optimum system
-                # n_opt = pypsa.Network('n_opt.nc')
-                
-                ### Create partial mga constraint for local demand
+                # Get optimum system data for local 
+                data_local = pd.read_pickle('n_opt_data_local.pkl')
+            
+                ## Create partial mga constraint for local demand
                 # Loop through optimal system to find cost of local variables
-                # local_cost = 0
-                # for variable in ['Data', 'P2X', 'Storage']:
-                #     if variable == 'Storage': #and not n_opt.stores.e_nom_opt[variable] == 0:
-                        
-                #         capital_cost  = n_opt.stores.capital_cost[variable]
-                #         e_nom         = n_opt.stores.e_nom_opt[variable]
-                #         marginal_cost = n_opt.stores.marginal_cost[variable]
-                #         e_sum         = n_opt.stores_t.e[variable].sum()
-                        
-                #         local_cost += capital_cost * e_nom + marginal_cost * e_sum
-
-                #     elif variable == 'Data' or variable == 'P2X':
-                #         #capital costs
-                #         capital_cost  = n_opt.generators.capital_cost[variable]
-                #         p_nom         = n_opt.generators.p_nom_opt[variable]
-                        
-                #         # marginal revenues
-                #         marginal_cost = n_opt.generators.marginal_cost[variable]
-                #         p_sum         = n_opt.generators_t.p[variable].sum()
-
-                #         local_cost += capital_cost * p_nom + marginal_cost * p_sum
-                        
-                
+                local_cost = 0
+                for variable in data_local.columns:
+                    
+                    local_cost += (data_local[variable]['p_nom_opt'] * data_local[variable]['capital_cost']
+                                    + data_local[variable]['p_sum'] * data_local[variable]['marginal_cost'])
+                    
                 # Get variables
                 vars_gen     = get_var(n, 'Generator', 'p_nom')
                 vars_gen_t   = get_var(n, 'Generator', 'p')
                 vars_store   = get_var(n, 'Store', 'e_nom')
                 vars_store_t = get_var(n, 'Store', 'e')
                 
-                # Multiply each variable with matching capital cost and add it all together
-                # l_cc = linexpr( (n_opt.generators.capital_cost['P2X'],  vars_gen["P2X"]), 
-                #                 (n_opt.generators.capital_cost['Data'], vars_gen["Data"]), 
-                #                 (n_opt.stores.capital_cost['Storage'],  vars_store['Storage']) )
+                # Right-hand-side: Upper limit of partial MGA constraint for local demand
+                rhs = local_cost + abs(local_cost) * epsilon
                 
-                # l_mc_store = linexpr( (n_opt.stores.marginal_cost['Storage'], vars_store_t['Storage']) ).sum()
-                # l_mr_data  = linexpr( (n_opt.generators.marginal_cost['Data'], vars_gen_t['Data']) ).sum()
-                # l_mr_p2x   = linexpr( (n_opt.generators.marginal_cost['P2X'], vars_gen_t['P2X']) ).sum()
+                # Left-hand-side: Variables to limit
+                lhs = ''
+                for variable in data_local.columns:
+                    if variable == 'Storage':
+                        lhs += (linexpr( (data_local[variable]['capital_cost'], vars_store[variable]) ) 
+                                + linexpr( (data_local[variable]['marginal_cost'], vars_store_t[variable]) ).sum())
+                    else:
+                        lhs += (linexpr( (data_local[variable]['capital_cost'], vars_gen[variable]) ) 
+                                + linexpr( (data_local[variable]['marginal_cost'], vars_gen_t[variable]) ).sum())
                 
-                # Multiply each variable with matching capital cost and add it all together
-                # l_cc = linexpr( (39912.553193184336,  vars_gen["P2X"]), 
-                #                 (9453203.316547655, vars_gen["Data"]), 
-                #                 (53914.141711254,  vars_store['Storage']) )
+                # lhs = (   linexpr( (data_local['Data']['capital_cost'],    vars_gen['Data']) ) 
+                #           + linexpr( (data_local['Data']['marginal_cost'], vars_gen_t['Data']) ).sum()
+                #         + linexpr( (data_local['P2X']['capital_cost'],     vars_gen['P2X']) ) 
+                #           + linexpr( (data_local['P2X']['marginal_cost'], vars_gen_t['P2X']) ).sum()
+                #         + linexpr( (data_local['Storage']['capital_cost'], vars_store['Storage']) ) 
+                #           + linexpr( (data_local['Storage']['marginal_cost'], vars_store_t['Storage']) ).sum()
+                #         )
                 
-                # # l_cc_store = linexpr( (53914.141711254,    vars_store['Storage']) )
-                # l_cc_data  = linexpr( (9453203.316547655,  vars_gen["Data"]) )
-                # r_cc_data  = 9453203.316547655 * 2197.7980424170364 * (1+epsilon)
+                # Define partial mga constraint
+                define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "partial_mga_constraint_local")
                 
-                # l_cc_p2x   = linexpr( (39912.553193184336, vars_gen["P2X"])  )
-                # r_cc_data  = 39912.553193184336 * 2197.7980424170364 * (1+epsilon)
+        def link_mga_constraint(n, snapshots, mga_options):
+            if mga_options is not None and mga_options['mga_slack'] is not None:
+                from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
                 
-                # # l_mc_store = linexpr( (1.8, vars_store_t['Storage']) ).sum()
-                # # l_mr_data  = linexpr( (2023.6, vars_gen_t['Data']) ).sum()
-                # # l_mr_p2x   = linexpr( (42.6, vars_gen_t['P2X']) ).sum()
+                # Get MGA slack
+                epsilon = mga_options['mga_slack']
                 
-                lhs = ( linexpr( (1, vars_gen['P2X']) ) 
-                       + linexpr( (1, vars_store['Storage']) )
-                       )
+                # # Get optimum system data
+                data_links = pd.read_pickle('n_opt_data_link.pkl')
+            
+                ## Create partial mga constraint for local demand
+                # Loop through optimal system to find cost of links.
+                link_cost = 0
+                for variable in data_links.columns:
+                    link_cost += (data_links[variable]['p_nom_opt'] * data_links[variable]['capital_cost'])
+                    
+                # Get variables
+                vars_links = get_var(n, 'Link', 'p_nom')
                 
-                define_constraints(n, lhs, "<=", 1000, "GlobalConstraint", "Combine_test")
+                # Right-hand-side: Upper limit of partial MGA constraint for links
+                rhs = link_cost * (1 + epsilon)
                 
-                # # Define lhs
-                # lhs = l_cc + l_mc_store + l_mr_data + l_mr_p2x
+                # Left-hand-side: Variables to limit
+                lhs = ''
+                for link in data_links.columns:
+                    lhs += linexpr( (data_links[link]['capital_cost'], vars_links[link]) ) 
                 
-                # # Define rhs
-                # rhs = local_cost + abs(local_cost) * (epsilon)
-                
-                # define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "local_mga_constraint")
+                # Define partial mga constraint
+                define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "partial_mga_constraint_links")
         
         ### Call custom constraints 
         link_constraint(n)
         marry_links(n)
         area_constraint(n)
         
-        from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
-        vars_gen     = get_var(n, 'Generator', 'p_nom')
-        vars_gen_t   = get_var(n, 'Generator', 'p')
-        vars_store   = get_var(n, 'Store', 'e_nom')
-        vars_store_t = get_var(n, 'Store', 'e')
-        
-        # lhs = (   linexpr( (1, vars_gen_t['Data']) ).sum() 
-        #         + linexpr( (1, vars_gen_t['P2X']) ).sum()
-        #         )
-        
-        # define_constraints(n, lhs, ">=", -19000000, "GlobalConstraint", "Combine_test_sum")
-        
-        lhs = linexpr( (2023.6, vars_gen_t['Data']) ).sum()
-        rhs = -19000000 * 2023.6 
-        define_constraints(n, lhs, ">=", rhs, "GlobalConstraint", "Combine_test_sum")
-
+        ### Call partial mga constraints
+        local_mga_constraint(n, snapshots, mga_options)
+        link_mga_constraint(n, snapshots, mga_options)
 
     #### PyMGA ####
     # PyMGA: Build case from PyPSA network
@@ -266,36 +251,55 @@ if __name__ == '__main__':
     
     # PyMGA: Solve optimal system
     opt_sol, obj, n_opt = method.find_optimum()
-    n_opt.export_to_netcdf('n_opt.nc')
     
-    # Draw optimal system (optional)
-    # draw_network(n_solved, show_capacities = True)
+    # Export local data for partial mga constraint
+    n_opt_data_local = pd.DataFrame( {
+        'Data':[n_opt.generators.p_nom_opt['Data'], n_opt.generators_t.p['Data'].sum(),
+                n_opt.generators.capital_cost['Data'], n_opt.generators.marginal_cost['Data']],
+        'P2X':[n_opt.generators.p_nom_opt['P2X'], n_opt.generators_t.p['P2X'].sum(),
+               n_opt.generators.capital_cost['P2X'], n_opt.generators.marginal_cost['P2X']],
+        'Storage':[n_opt.stores.e_nom_opt['Storage'], n_opt.stores_t.e['Storage'].sum(),
+                   n_opt.stores.capital_cost['Storage'], n_opt.stores.marginal_cost['Storage']],
+        },
+        index = ['p_nom_opt', 'p_sum', 'capital_cost', 'marginal_cost'])
+    
+    n_opt_data_local.to_pickle('n_opt_data_local.pkl')
+    
+    # Export link data for partial mga constraint
+    n_opt_data_link = pd.DataFrame()
+    link_names = n_opt.links[n_opt.links.index.str.startswith('Island')].index
+    for link in link_names:
+        row_data = pd.DataFrame({ link:[n_opt.links.p_nom_opt[link], n_opt.links.capital_cost[link]]}, index = ['p_nom_opt', 'capital_cost'])
+        n_opt_data_link = pd.concat([n_opt_data_link, row_data], axis = 1)
+        
+    n_opt_data_link.to_pickle('n_opt_data_link.pkl')
+    
     
     # PyMGA: Search near-optimal space using chosen method
-    # verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
+    verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
 
     # # PyMGA: Sample the identified near-optimal space
-    # har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
-    #                                         directions = directions, 
-    #                                         verticies = verticies)
+    har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
+                                            directions = directions, 
+                                            verticies = verticies)
     
-    # bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies)
+    bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies)
 
 
     # #### Process results ####
-    # # Plot near-optimal space of Data (x1) and P2X (x2)
-    # all_variables    = list(variables.keys())
+    # Plot near-optimal space of Data (x1) and P2X (x2)
+    all_variables    = list(variables.keys())
     # chosen_variables = ['x1', 'x2']
-    # # near_optimal_space_2D(all_variables, chosen_variables,
-    # #                       verticies, MAA_samples,
-    # #                       plot_MAA_points = True,
-    # #                       bins = 50)
+    # near_optimal_space_2D(all_variables, chosen_variables,
+    #                       verticies, MAA_samples,
+    #                       plot_MAA_points = True,
+    #                       bins = 50)
     
     # # Matrix plot of 2D "sides" of polytope, with histograms and correlations
-    # near_optimal_space_matrix(all_variables, verticies, har_samples,
-    #                           xlabel = 'Unit []', ylabel = 'Unit []',
-    #                           opt_solution = opt_sol)
+    near_optimal_space_matrix(all_variables, verticies, har_samples,
+                              xlabel = 'Unit []', ylabel = 'Unit []',
+                              opt_solution = opt_sol)
     
-    # near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
-    #                           xlabel = 'Unit []', ylabel = 'Unit []',
-    #                           opt_solution = opt_sol)
+    near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
+                              xlabel = 'Unit []', ylabel = 'Unit []',
+                              opt_solution = opt_sol)
