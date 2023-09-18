@@ -75,7 +75,7 @@ if __name__ == '__main__':
                                             directions = directions, 
                                             verticies = verticies)
     # Bayesian bootstrap sampler, good up to aorund 8 dimensions
-    bayesian_samples = PyMGA.sampler.bayesian_sample(verticies, 1_000_000) 
+    bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies) 
 
 
     #### Processing results ####
