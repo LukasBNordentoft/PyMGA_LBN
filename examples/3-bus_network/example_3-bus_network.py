@@ -14,7 +14,7 @@ import os
 import sys
 
 # Add parent folder to directory to load PyMGA package
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(parent_dir)
 
 import PyMGA
