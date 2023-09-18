@@ -22,6 +22,7 @@ if __name__ == '__main__':
     # Create or load network
     network = 'example_3-bus_network.nc'
     
+    n_boundary_points = 64
     
     # Load options from configuration file
     with open('config.yaml') as f:
@@ -38,9 +39,9 @@ if __name__ == '__main__':
                   'x3': ['Generator',
                         ['solar'],
                         'p_nom',],
-                  'x4': ['Store',
-                        ['battery'],
-                        'e_nom',],
+                  # 'x4': ['Store',
+                  #       ['battery'],
+                  #       'e_nom',],
                     } 
     
 
@@ -60,15 +61,30 @@ if __name__ == '__main__':
     opt_sol, obj, n_solved = method.find_optimum()
 
     # PyMGA: Search near-optimal space using chosen method
-    verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
-    
+    verticies, directions, _, _ = method.search_directions(n_boundary_points,
+                                                           n_workers = 16)
+    #%%
     # PyMGA: Sample the identified near-optimal space
     # Hit-and-run sampler, valid for all dimensions
-    har_samples = PyMGA.sampler.har_sample(1000_000, x0 = np.zeros(len(variables.keys())), 
+    har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
+    #%%
+    from PyMGA.utilities.general import check_large_volume
+    # Create a boolean mask based on the condition
+    mask = np.apply_along_axis(check_large_volume, 
+                               axis = 1, 
+                               arr = har_samples,
+                               directions = directions,
+                               verticies = verticies, 
+                               sample = 
+                               tol = 1000)
+    
+    # Filter the rows that meet the condition
+    filtered_array = har_samples[mask]
+#%%
     # Bayesian bootstrap sampler, good up to aorund 8 dimensions
-    bayesian_samples = PyMGA.sampler.bayesian_sample(verticies, 1_000_000) 
+    bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies) 
 
 
     #### Processing results ####
@@ -76,19 +92,21 @@ if __name__ == '__main__':
     # # Plot near-optimal space of Data and P2X
     all_variables    = ['Wind', 'Coal', 
                         'PV', 
-                        'Battery'
+                        # 'Battery'
                         ] #list(variables.keys())
     chosen_variables = ['Wind', 'Coal']
-
+#
     
     # Matrix plot of 2D "sides" of polytope, with histograms and correlations
     # Plot Hit-and-Run samples
     near_optimal_space_matrix(all_variables, verticies, har_samples,
                               opt_solution = opt_sol,
-                              title = 'Near-optimal space')
+                              # xlim = [0, 1_000_000], ylim = [0, 1_000_000],
+                              title = f'Near-optimal space - bMAA ({n_boundary_points} points), HAR sampler')
     
     # Plot Bayesian Bootstrap samples
     near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
                               opt_solution = opt_sol,
-                              title = 'Near-optimal space')
+                              # xlim = [0, 1_000_000], ylim = [0, 1_000_000],
+                              title = f'Near-optimal space - bMAA ({n_boundary_points} points), Bayesian sampler')
      
