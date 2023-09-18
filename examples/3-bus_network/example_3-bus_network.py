@@ -29,6 +29,7 @@ if __name__ == '__main__':
     # Create or load network
     network = 'example_3-bus_network.nc'
     
+    n_boundary_points = 64
     
     # Load options from configuration file
     with open('config.yaml') as f:
@@ -67,11 +68,12 @@ if __name__ == '__main__':
     opt_sol, obj, n_solved = method.find_optimum()
 
     # PyMGA: Search near-optimal space using chosen method
-    verticies, directions, _, _ = method.search_directions(14, n_workers = 16)
+    verticies, directions, _, _ = method.search_directions(n_boundary_points,
+                                                           n_workers = 16)
     
     # PyMGA: Sample the identified near-optimal space
     # Hit-and-run sampler, valid for all dimensions
-    har_samples = PyMGA.sampler.har_sample(1000_000, x0 = np.zeros(len(variables.keys())), 
+    har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
     # Bayesian bootstrap sampler, good up to aorund 8 dimensions
