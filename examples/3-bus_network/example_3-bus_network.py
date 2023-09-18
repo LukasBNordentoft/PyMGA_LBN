@@ -10,6 +10,13 @@ Description:
     Exmple use of PyMGA to explore a network with 3 buses.
 """
 
+import os
+import sys
+
+# Add parent folder to directory to load PyMGA package
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(parent_dir)
+
 import PyMGA
 from PyMGA.utilities.plot import near_optimal_space_2D, near_optimal_space_matrix
 import numpy as np
