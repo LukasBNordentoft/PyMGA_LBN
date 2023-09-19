@@ -33,7 +33,7 @@ if __name__ == '__main__':
     network = 'example_island_network.nc'
     
     # Choose number of points to find on boundary
-    n_boundary_points = 14
+    n_boundary_points = 48
     
     # Load options from configuration file
     with open('config.yaml') as f:
@@ -42,15 +42,15 @@ if __name__ == '__main__':
         
     # Set MAA variables to explore
     variables = {
-                # 'P2X': ['Generator',
-                #         ['P2X'],
-                #         'p_nom',],
-                # 'Data': ['Generator',
-                #         ['Data'],
-                #         'p_nom',],
-                # 'Storage': ['Store',
-                #         ['Storage'],
-                #         'e_nom',],
+                'P2X': ['Generator',
+                        ['P2X'],
+                        'p_nom',],
+                'Data': ['Generator',
+                        ['Data'],
+                        'p_nom',],
+                'Storage': ['Store',
+                        ['Storage'],
+                        'e_nom',],
                 'DK': ['Link',
                         ['link_Denmark'],
                         'p_nom',],
@@ -60,14 +60,18 @@ if __name__ == '__main__':
                 'BE': ['Link',
                         ['link_Belgium'],
                         'p_nom',],
-                # 'DE': ['Link',
-                #         ['link_Germany'],
-                #         'p_nom',],
-                # 'NL': ['Link',
-                #         ['link_Netherlands'],
-                #         'p_nom',],
-                # 'GB': ['Link',
-                #         ['link_United Kingdom'],
+                'DE': ['Link',
+                        ['link_Germany'],
+                        'p_nom',],
+                'NL': ['Link',
+                        ['link_Netherlands'],
+                        'p_nom',],
+                'GB': ['Link',
+                        ['link_United Kingdom'],
+                        'p_nom',],
+                # 'Links': ['Link',
+                #         ['link_Denmark', 'link_Norway', 'link_Belgium',
+                #           'link_Germany', 'link_Netherlands', 'link_United Kingdom'],
                 #         'p_nom',],
                         } 
     
@@ -217,7 +221,7 @@ if __name__ == '__main__':
                 
                 # Get MGA slack
                 # epsilon = mga_options['mga_slack']
-                epsilon = 0.1
+                epsilon = mga_options['mga_slack']
                 
                 # # Get optimum system data
                 data_links = pd.read_pickle('n_opt_data_link.pkl')
@@ -336,11 +340,11 @@ if __name__ == '__main__':
                                       network,
                                       extra_func = extra_func,
                                       variables = variables,
-                                      mga_slack = 10,
+                                      mga_slack = 0.1,
                                       n_snapshots = 8760)
     
     # PyMGA: Choose MAA method
-    method = PyMGA.methods.bMAA(case)
+    method = PyMGA.methods.MAA(case)
     
     # PyMGA: Solve optimal system
     opt_sol, obj, n_opt = method.find_optimum()
@@ -376,15 +380,13 @@ if __name__ == '__main__':
                                                            n_workers = 16,
                                                            max_iter = 300)
     runtime = toc()
-    print(f'time: {runtime}')
-#%%
+
     har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
     bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies)
 
-#%%
-    # #### Process results ####
+    #### Process results ####
     # Plot near-optimal space of Data (x1) and P2X (x2)
     all_variables    = list(variables.keys())
     
