@@ -46,9 +46,9 @@ if __name__ == '__main__':
                   'x3': ['Generator',
                         ['solar'],
                         'p_nom',],
-                  'x4': ['Store',
-                        ['battery'],
-                        'e_nom',],
+                  # 'x4': ['Store',
+                  #       ['battery'],
+                  #       'e_nom',],
                     } 
     
 
@@ -70,34 +70,34 @@ if __name__ == '__main__':
     # PyMGA: Search near-optimal space using chosen method
     verticies, directions, _, _ = method.search_directions(n_boundary_points,
                                                            n_workers = 16)
-    
     # PyMGA: Sample the identified near-optimal space
     # Hit-and-run sampler, valid for all dimensions
     har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
+
     # Bayesian bootstrap sampler, good up to aorund 8 dimensions
     bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies) 
 
 
     #### Processing results ####
-
     # # Plot near-optimal space of Data and P2X
     all_variables    = ['Wind', 'Coal', 
                         'PV', 
-                        'Battery'
+                        # 'Battery'
                         ] #list(variables.keys())
     chosen_variables = ['Wind', 'Coal']
-
     
     # Matrix plot of 2D "sides" of polytope, with histograms and correlations
     # Plot Hit-and-Run samples
     near_optimal_space_matrix(all_variables, verticies, har_samples,
                               opt_solution = opt_sol,
-                              title = 'Near-optimal space')
+                              # xlim = [0, 1_000_000], ylim = [0, 1_000_000],
+                              title = f'Near-optimal space - bMAA ({n_boundary_points} points), HAR sampler')
     
     # Plot Bayesian Bootstrap samples
     near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
                               opt_solution = opt_sol,
-                              title = 'Near-optimal space')
+                              # xlim = [0, 1_000_000], ylim = [0, 1_000_000],
+                              title = f'Near-optimal space - bMAA ({n_boundary_points} points), Bayesian sampler')
      

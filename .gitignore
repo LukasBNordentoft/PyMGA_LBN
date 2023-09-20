@@ -4,3 +4,4 @@ tmp/
 .DS_Store
 build/
 PyMGA.egg-info/
+examples/island/n_opt.nc

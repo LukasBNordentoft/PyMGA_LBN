@@ -292,7 +292,7 @@ def extra_functionality(n, snapshots, mga_options, direction, extra_func):
     
     # Add user defined constraints that were passed to pypsa_to_case
     if extra_func is not None:
-        extra_func(n, snapshots)
+        extra_func(n, snapshots, mga_options)
     
     
     # Implement MGA constraint 

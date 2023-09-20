@@ -9,15 +9,18 @@ def har_sample(n_samples, x0, directions, verticies):
     x0: starting point
     directions: Directions that have
     been searched in with the MAA algorithm phase 1
-    verticies: The verticies found by searing in
+    verticies: The verticies found by searching in
     directions with the MAA algorithm
     """
+    
+    
     for i in range(10):
         if not check_large_volume(directions, verticies, x0, tol=1000):
             print(f'x0 not in large volume. Trying again. i:{i}')
             x0 = calc_x0(directions, verticies)
         else:
             break
+        
     # We want to represent the bounding hyperplanes as
     # normalvectors and offsets.
     # Offset is the distance from origo to the
@@ -43,7 +46,7 @@ def har_sample(n_samples, x0, directions, verticies):
         x_new = x_i+direct_i*lambda_i
         
         samples[j, :] = x_new
-        x_i = x_new
+        x_i = x_new    
 
     return samples
 
