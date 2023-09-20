@@ -33,7 +33,7 @@ if __name__ == '__main__':
     network = 'example_island_network.nc'
     
     # Choose number of points to find on boundary
-    n_boundary_points = 48
+    n_boundary_points = 16
     
     # Load options from configuration file
     with open('config.yaml') as f:
@@ -177,7 +177,13 @@ if __name__ == '__main__':
         # Define partial MGA constraints
         def local_mga_constraint(n, snapshots, mga_options):
             if mga_options is not None and mga_options['mga_slack'] is not None:
-                from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
+                from pypsa.linopt import get_var, linexpr, define_constraints
+                '''
+                This function constraints the total monetary value of the local
+                demand on the island when searching the near-optimal space to
+                never exceed the local demand monetary value in the optimal 
+                system times (1+epsilon).
+                '''
                 
                 # Get MGA slack
                 epsilon = mga_options['mga_slack']
@@ -215,15 +221,20 @@ if __name__ == '__main__':
                 # Define partial mga constraint
                 define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "partial_mga_constraint_local")
                 
+        
         def link_mga_constraint(n, snapshots, mga_options):
             if mga_options is not None and mga_options['mga_slack'] is not None:
-                from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints
+                from pypsa.linopt import get_var, linexpr, define_constraints
+                '''
+                This function constraints the total monetary value of the links
+                when searching the near-optimal space to never exceed the link
+                monetary value in the optimal system times (1+epsilon).
+                '''
                 
                 # Get MGA slack
-                # epsilon = mga_options['mga_slack']
                 epsilon = mga_options['mga_slack']
                 
-                # # Get optimum system data
+                # Get optimum system data
                 data_links = pd.read_pickle('n_opt_data_link.pkl')
             
                 ## Create partial mga constraint for local demand
@@ -246,42 +257,43 @@ if __name__ == '__main__':
                 # Define partial mga constraint
                 define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "partial_mga_constraint_links")
         
-        def link_global_mga(n, sns, mga_options):
+        
+        def unify_partial_mga_constraints(n, sns, mga_options, with_fix=False):
             if mga_options is not None and mga_options['mga_slack'] is not None:
                 import pandas as pd
-                from pypsa.linopf import lookup, network_lopf, ilopf
-                from pypsa.descriptors import get_switchable_as_dense as get_as_dense
-                from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints, get_dual, get_con, write_objective, get_sol, define_variables
                 from pypsa.descriptors import nominal_attrs
-                from pypsa.descriptors import get_extendable_i, get_non_extendable_i
+                from pypsa.linopf import lookup
+                from pypsa.linopt import define_constraints, get_var, linexpr
+                from pypsa.descriptors import get_switchable_as_dense as get_as_dense
+                from pypsa.descriptors import get_extendable_i
                 """
-                Based on https://github.com/PyPSA/pypsa-eur-mga
+                This constraint allows the objective value to increase by the
+                sum of the allowed increase of the partial constraints, as:
+                obj <= obj* + epsilon * (link_cost* + abs(local_cost*))
+                Where the the absolute value of local cost is used, as it can 
+                be negative. 
+                
+                This function is based on Fabian Neumanns constraint defining 
+                near-optimal feasible space, see
+                https://github.com/PyPSA/pypsa-eur-mga
                 """
                 
-                def objective_constant(n, ext=True, nonext=True):
-                    import pandas as pd
-                    # from pypsa.linopt import get_var, linexpr, join_exprs, define_constraints, get_dual, get_con, write_objective, get_sol, define_variables
-                    from pypsa.descriptors import nominal_attrs
-                    from pypsa.descriptors import get_extendable_i, get_non_extendable_i
-                    
-                    """
-                    Author: Fabian Neumann 
-                    Source: https://github.com/PyPSA/pypsa-eur-mga
-                    """
-    
-                    if not (ext or nonext):
-                        return 0.0
-    
-                    constant = 0.0
-                    for c, attr in nominal_attrs.items():
-                        i = pd.Index([])
-                        if ext:
-                            i = i.append(get_extendable_i(n, c))
-                        if nonext:
-                            i = i.append(get_non_extendable_i(n, c))
-                        constant += n.df(c)[attr][i] @ n.df(c).capital_cost[i]
-    
-                    return constant
+                epsilon = mga_options['mga_slack']
+                
+                # Get optimum system data
+                data_links = pd.read_pickle('n_opt_data_link.pkl')
+                data_local = pd.read_pickle('n_opt_data_local.pkl')
+            
+                # Loop through optimal system to find cost of links.
+                link_cost = 0
+                for variable in data_links.columns:
+                    link_cost += (data_links[variable]['p_nom_opt'] * data_links[variable]['capital_cost'])
+                # Loop through optimal system to find cost of local variables
+                local_cost = 0
+                for variable in data_local.columns:
+                    local_cost += (data_local[variable]['p_nom_opt'] * data_local[variable]['capital_cost']
+                                    + data_local[variable]['p_sum'] * data_local[variable]['marginal_cost'])
+                
     
                 expr = []
     
@@ -305,22 +317,9 @@ if __name__ == '__main__':
     
                 lhs = pd.concat(expr).sum()
                 
-                # Get MGA slack
-                epsilon = mga_options['mga_slack']
-                
-                # # Get optimum system data
-                data_links = pd.read_pickle('n_opt_data_link.pkl')
-            
-                ## Create partial mga constraint for local demand
-                # Loop through optimal system to find cost of links.
-                link_cost = 0
-                for variable in data_links.columns:
-                    link_cost += (data_links[variable]['p_nom_opt'] * data_links[variable]['capital_cost'])
+                rhs = n.objective_optimum + epsilon * link_cost + epsilon * abs(local_cost)
     
-                ext_const = objective_constant(n)
-                rhs = n.objective_optimum + epsilon * (link_cost)
-                    
-                define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "link_mga_global")
+                define_constraints(n, lhs, "<=", rhs, "GlobalConstraint", "partial")
         
         ### Call custom constraints 
         link_constraint(n)
@@ -331,8 +330,7 @@ if __name__ == '__main__':
         local_mga_constraint(n, snapshots, mga_options)
         link_mga_constraint(n, snapshots, mga_options)
         
-        # Call global mga constraints
-        # link_global_mga(n, snapshots, mga_options)
+        # unify_partial_mga_constraints(n, snapshots, mga_options)
 
     #### PyMGA ####
     # PyMGA: Build case from PyPSA network
@@ -344,7 +342,7 @@ if __name__ == '__main__':
                                       n_snapshots = 8760)
     
     # PyMGA: Choose MAA method
-    method = PyMGA.methods.MAA(case)
+    method = PyMGA.methods.bMAA(case)
     
     # PyMGA: Solve optimal system
     opt_sol, obj, n_opt = method.find_optimum()
@@ -380,11 +378,11 @@ if __name__ == '__main__':
                                                            n_workers = 16,
                                                            max_iter = 300)
     runtime = toc()
-
+#%%
     har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
-    bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies)
+    # bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies)
 
     #### Process results ####
     # Plot near-optimal space of Data (x1) and P2X (x2)
@@ -395,7 +393,7 @@ if __name__ == '__main__':
                               xlabel = 'Unit []', ylabel = 'Unit []',
                               opt_solution = opt_sol)
     
-    near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
-                              title = f'bMAA method, Bayesian sampler - points: {n_boundary_points}, vars: {len(variables.keys())}',
-                              xlabel = 'Unit []', ylabel = 'Unit []',
-                              opt_solution = opt_sol)
+    # near_optimal_space_matrix(all_variables, verticies, bayesian_samples,
+    #                           title = f'bMAA method, Bayesian sampler - points: {n_boundary_points}, vars: {len(variables.keys())}',
+    #                           xlabel = 'Unit []', ylabel = 'Unit []',
+    #                           opt_solution = opt_sol)
