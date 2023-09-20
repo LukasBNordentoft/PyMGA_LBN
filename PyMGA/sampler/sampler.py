@@ -44,6 +44,7 @@ def har_sample(n_samples, x0, directions, verticies):
         lambda_min = max(t_range[filt_min])  # Minimum stepsize
         lambda_i = np.random.uniform(lambda_min, lambda_max, 1)
         x_new = x_i+direct_i*lambda_i
+        
         samples[j, :] = x_new
         x_i = x_new    
 
