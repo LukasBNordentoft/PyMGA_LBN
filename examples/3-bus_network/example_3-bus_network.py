@@ -63,39 +63,24 @@ if __name__ == '__main__':
     # PyMGA: Search near-optimal space using chosen method
     verticies, directions, _, _ = method.search_directions(n_boundary_points,
                                                            n_workers = 16)
-    #%%
+
     # PyMGA: Sample the identified near-optimal space
     # Hit-and-run sampler, valid for all dimensions
     har_samples = PyMGA.sampler.har_sample(1_000_000, x0 = np.zeros(len(variables.keys())), 
                                             directions = directions, 
                                             verticies = verticies)
-    #%%
-    from PyMGA.utilities.general import check_large_volume
-    # Create a boolean mask based on the condition
-    mask = np.apply_along_axis(check_large_volume, 
-                               axis = 1, 
-                               arr = har_samples,
-                               directions = directions,
-                               verticies = verticies, 
-                               sample = 
-                               tol = 1000)
-    
-    # Filter the rows that meet the condition
-    filtered_array = har_samples[mask]
-#%%
+
     # Bayesian bootstrap sampler, good up to aorund 8 dimensions
     bayesian_samples = PyMGA.sampler.bayesian_sample(1_000_000, verticies) 
 
 
     #### Processing results ####
-
     # # Plot near-optimal space of Data and P2X
     all_variables    = ['Wind', 'Coal', 
                         'PV', 
                         # 'Battery'
                         ] #list(variables.keys())
     chosen_variables = ['Wind', 'Coal']
-#
     
     # Matrix plot of 2D "sides" of polytope, with histograms and correlations
     # Plot Hit-and-Run samples
