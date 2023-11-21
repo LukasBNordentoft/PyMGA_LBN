@@ -2,7 +2,7 @@
 
 A Python module conaining Modeling to Generate Alternatives and Modeling All Alternatives methods. 
 
-## Instalation
+## Installation
 
 Clone the repository to the decired installation folder, e.g. 'src/PyMGA'  and install the package with one of the following approaches:
 
