@@ -118,3 +118,29 @@ def check_small_volume(points_nD, p):
     m.Status
 
     return m.Status == 2
+
+def calculate_cheb(vertices, directions):
+    import polytope as pt
+    
+    if vertices.shape[1] <=7:
+        #If the dimensions are below 7, use convexhull to get more accurate 
+        # calculation of the Chebyshev center
+        
+        # Define polytope
+        poly = pt.qhull(vertices)
+        
+    else:
+        # If more than 7 dimensions, use less accurate hyperplanes to 
+        # calculate Chebyshev center
+    
+        # Create inequality formulation of hyperplanes
+        A = -directions
+        b = np.sum(directions*-vertices, axis = 1)
+        
+        # Define polytope
+        poly = pt.Polytope(A,b)
+    
+    cheb_center = poly.chebXc
+    cheb_radius = poly.chebR
+    
+    return cheb_center, cheb_radius

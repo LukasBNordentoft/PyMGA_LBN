@@ -25,129 +25,26 @@ def set_options():
     plt.rcParams['axes.grid'] = True
     # plt.fontname = "Computer Modern Serif"
     
-def near_optimal_space_2D(all_variables, chosen_variables,
-                          verticies, samples,
-                          bins = 50, ax = None,
-                          linewidth = 2, linecolor = 'gray',
-                          xlim = [None, None], ylim = [None, None],
-                          plot_MAA_points = False, filename = None, show_text = True,
-                          textcolor = 'black',
-                          title = 'Near-optimal space',
-                          ):
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    from scipy.spatial import ConvexHull
+def cmap_alpha(cmap_name):
     import numpy as np
-    import pandas as pd
-    '''
-    Plots 2D slice of a near-optimal space based on two chosen variables.
-    
-    Required packages: 
-        matplotlib
-        scipy
-        numpy
-        pandas
-    
-    Args:
-        all_variables (list): List of variables explored
-        chosen_variables(list): List of the two variables to plot
-        verticies (array): Boundary points as n-dimensional numpy array of floats.
-        samples (array): Samples as n-dimensional array of floats.
-        bins (int): Number of bins to use for pcolormesh
-    
-    '''
-    
-    # Set plotting options
-    set_options()
-    
-    # Dataframe with all verticies
-    verticies_df = pd.DataFrame(verticies,
-                                columns = all_variables)
-    
-    # Get verticies from only the chosen variables
-    variable_verticies = verticies_df[chosen_variables]
-    
-    if ax == None:
-        fig, ax = plt.subplots(1, 1, figsize = (10,8))
-    
-    if show_text:
-        ax.set_xlabel(chosen_variables[0], fontsize = 24)
-        ax.set_ylabel(chosen_variables[1], fontsize = 24)
-        ax.set_title(title, color = textcolor)
-    
-    # Set x and y to be verticies for the first two variables
-    x, y = variable_verticies[chosen_variables[0]], variable_verticies[chosen_variables[1]]
-    
-    samples_df = pd.DataFrame(samples,
-                              columns = all_variables)
-    
-    # Set x and y as samples for this dimension
-    x_samples = samples_df[chosen_variables[0]]
-    y_samples = samples_df[chosen_variables[1]]
-    
-    # --------  Create 2D histogram --------------------
-    hist, xedges, yedges = np.histogram2d(x_samples, y_samples,
-                                          bins = bins)
-    
-    # Create grid for pcolormesh
-    x_grid, y_grid = np.meshgrid(xedges, yedges)
-    
-    # Create pcolormesh plot with square bins
-    ax.pcolormesh(x_grid, y_grid, hist.T, cmap = 'Blues', 
-                  zorder = 0)
-    
-    # Create patch to serve as hexbin label
-    hb = mpatches.Patch(color = 'tab:blue')
-    
-    ax.grid('on')
-    
-    # --------  Plot hull --------------------
-    hull = ConvexHull(variable_verticies.values)
-    
-    # plot simplexes
-    for simplex in hull.simplices:
-        l0, = ax.plot(variable_verticies.values[simplex, 0], variable_verticies.values[simplex, 1], 'k-', 
-                color = linecolor, label = 'faces',
-                linewidth = linewidth, zorder = 0)
-    
-    # list of legend handles and labels
-    l_list, l_labels   = [l0, hb], ['Convex hull', 'Sample density']
-    
-    if plot_MAA_points:
-        # Plot vertices from solutions
-        l1, = ax.plot(x, y,
-                  'o', label = "Near-optimal",
-                  color = 'lightcoral', zorder = 2)
-        l_list.append(l1)
-        l_labels.append('MAA points')
-        
-    if show_text:
-        ax.legend(l_list, l_labels, 
-                  loc = 'center', ncol = len(l_list),
-                  bbox_to_anchor = (0.5, -0.15), fancybox=False, shadow=False,)
-    
-    # Set limits
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    
-    if not filename == None:
-        fig.savefig(filename, format = 'pdf', bbox_inches='tight')
-        
-    plt.show()
-        
-    return ax 
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LinearSegmentedColormap
 
-def near_optimal_space_matrix(variables, verticies, 
-                              samples,
+    cmap_alpha = plt.get_cmap(cmap_name)(range(256))
+    cmap_alpha[:,-1] = np.linspace(0.0, 1.0,256)
+    cmap_alpha = LinearSegmentedColormap.from_list(name = cmap_name + '_alpha',
+                                                   colors = cmap_alpha)
+    
+    return cmap_alpha
+
+def near_optimal_space_matrix(variables, vertices, samples = None,
                               bins = 50, ncols = 3,
                               title = 'Near-optimal space matrix', cmap = 'Blues',
                               xlim = [None, None], ylim = [None, None],
                               xlabel = None, ylabel = None,
-                              opt_solution = None,
-                              tech_titles = None, 
-                              plot_MAA_points = False,
-                              filename = None, show_cheb_radius = False,
-                              show_minmax = False,
+                              opt_solution = None, cheb_center = None,
+                              plot_vertices = False, plot_boundary = True,
+                              filename = None, 
                               ):
     # Take a multi-dimensional MAA polyhedron, and plot each "side" in 2D.
     # Plot the polyhedron shape, samples within and correlations.
@@ -161,48 +58,18 @@ def near_optimal_space_matrix(variables, verticies,
     import seaborn as sns
     
     pad = 5
-    
-    # colors = get_color_codes()
-    
+    text_lift = 1.075
     var_titles = variables
-
-    
-    # -------- create correlation matrix --------------------------
-    # Create dataframe from samples
-    samples_df = pd.DataFrame(samples, columns = variables)
-    
-    # Calculate correlation and normalize
-    samples_corr = samples_df.corr()
-    
-    # Calculate normalized correlation, used to color heatmap.
-    samples_temp = samples_corr + abs(samples_corr.min().min())
-    samples_norm = samples_temp / samples_temp.max().max()
     
     # -------- Set up plot ----------------------------------------
     set_options()
     
-    text_lift = 1.075
-    
-    # define the endpoints of the colormap
-    red    = (1.0, 0.7, 0.6)  # light red
-    yellow = (1.0, 1.0, 0.8)  # light yellow
-    green  = (0.6, 1.0, 0.6)  # light green
-    
-    # define the colormap
-    cmap = mcolors.LinearSegmentedColormap.from_list('my_colormap', [red, yellow, green])
-    
-    # Initialize and adjust figure
-    plt.figure()
+    # Initialize and adjust figure 
     fig, axs = plt.subplots(len(variables), len(variables), 
-                            figsize = (20/3 * len(variables),
-                                       5 * len(variables)))
+                            figsize=(20/3 * len(variables), 5 * len(variables)))
     
-    title_y = 0.94 if len(variables) == 4 else 0.96
-    
-    fig.suptitle(title, fontsize = 28, y = title_y)
-    
-    # figspace = 0.5 if len(techs) == 4 else 0.35
-    fig.subplots_adjust(wspace = 0.25, hspace = 0.35)
+    fig.suptitle(title, fontsize = 28, y = 0.95)
+    fig.subplots_adjust(wspace = 0.25, hspace = 0.35, top = 0.85)
     
     # Set top titles
     for ax, col in zip(axs[0], var_titles):
@@ -212,48 +79,62 @@ def near_optimal_space_matrix(variables, verticies,
     for ax, row in zip(axs[:,0], var_titles):
         ax.annotate(row, xy=(0, 0.5), xytext=(-ax.yaxis.labelpad - pad, 0),
                     xycoords = ax.yaxis.label, textcoords='offset points',
-                    size = 24, ha = 'right', va = 'center',
-                    rotation = 90)
+                    size = 24, ha = 'right', va = 'center', rotation = 90)
     
     # -------- Plotting -------------------------------
     
-    # Upper triangle of subplots
+    # Upper triangle of subplots ----------------------------------------------
     for i in range(0, len(variables)):
         for j in range(0, i):
             
-            corr = samples_norm[variables[i]][variables[j]] # Is only used for coloring
-            num  = samples_corr[variables[i]][variables[j]] # Is shown
-            
+            # Get axis
             ax = axs[j][i]
             
+            # Set ax options. Remove ticks and set title.
+            ax.patch.set_facecolor('white')
             ax.set_xticks([])
             ax.set_yticks([])
-            
-            # Write correlation
-            corr_text = str(round(num,2))
-            ax.text(0.5, 0.5, corr_text, ha='center', va='center', fontsize=20)
-            
             ax.text(0.5, text_lift, 'Correlation', ha='center', va='top',
                     transform=ax.transAxes, fontsize = 16, color = 'gray')
             
-            # Change bg color according to correlation
-            ax.patch.set_facecolor(cmap(corr))
+            # If samples are provided, calculate and plot correlations
+            if samples is not None:
+                
+                # Create colormap for correlations
+                red    = (1.0, 0.7, 0.6)  # light red
+                yellow = (1.0, 1.0, 0.8)  # light yellow
+                green  = (0.6, 1.0, 0.6)  # light green
+                cmap = mcolors.LinearSegmentedColormap.from_list('my_colormap',
+                                                                 [red, yellow, green])
+                
+                # Create dataframe from samples
+                samples_df = pd.DataFrame(samples, columns = variables)
+                
+                # Calculate correlation and normalize
+                samples_corr = samples_df.corr()
+                
+                # Calculate normalized correlation, used to color heatmap.
+                samples_temp = samples_corr + abs(samples_corr.min().min())
+                samples_norm = samples_temp / samples_temp.max().max()
+                
+                # Write correlation
+                corr_text = str(round(samples_corr[variables[i]][variables[j]],2))
+                ax.text(0.5, 0.5, corr_text, ha='center', va='center', fontsize=20)
+                
+                # Change bg color according to correlation
+                ax.patch.set_facecolor(cmap(samples_norm[variables[i]][variables[j]]))
+                
     
-    
-    # Diagonal plotting
+    # Diagonal plotting -------------------------------------------------------
     for j in range(0, len(variables)):
 
         ax = axs[j][j]
         
-        sns.histplot(samples_df[variables[j]].values,
-                     # color = colors[variables[j]],
-                     bins = bins,
-                     line_kws = {'linewidth':3},
-                     element = 'bars',
-                     stat = 'probability',
-                     kde = True,
-                     ax = ax, label = '_nolegend_',)
-        
+        # # Set ax options. Remove ticks and set title.
+        ax.text(0.5, text_lift, 'Histogram', ha='center', va='top', 
+                transform=ax.transAxes, fontsize = 16, color = 'gray')
+
+        # Set x and y labels
         if not xlabel == None or ylabel == None:
             ax.set_xlabel(xlabel, color = 'gray', size = 16)
             ax.set_ylabel(ylabel, color = 'gray', size = 16)
@@ -261,17 +142,27 @@ def near_optimal_space_matrix(variables, verticies,
             ax.set_ylabel('Proportion', color = 'gray', size = 16)
             ax.set_xlabel('Capcity [GW]', color = 'gray', size = 16)
         
-        ax.text(0.5, text_lift, 'Histogram', ha='center', va='top', 
-                transform=ax.transAxes, fontsize = 16, color = 'gray')
-        
+        # If samples are provided, calculate and plot histogram
+        if samples is not None:
+            sns.histplot(samples_df[variables[j]].values,
+                          bins = bins,
+                          line_kws = {'linewidth':3},
+                          element = 'bars',
+                          stat = 'probability',
+                          kde = True,
+                          ax = ax, label = '_nolegend_',)
+            
+        # Show optimum if provided
         if not opt_solution == None:
-            ax.axvline(x = opt_solution[j], 
-                       color = 'gold', linestyle = '--',
+            ax.axvline(x = opt_solution[j], color = 'gold', linestyle = '--',
                        linewidth = 4, gapcolor = 'darkorange',)
             
+        # Show chebyshev center if provided
+        if cheb_center is not None:
+            ax.axvline(x = cheb_center[j], color = 'red', linestyle = '--',
+                       linewidth = 2,)
     
-    
-    # lower traingle of subplots
+    # lower traingle of subplots ----------------------------------------------
     for j in range(0, len(variables)):
         for i in range(0, j):
             
@@ -287,92 +178,251 @@ def near_optimal_space_matrix(variables, verticies,
             ax.text(0.5, text_lift, 'Near-optimal space', ha='center', va='top',
                     transform=ax.transAxes, fontsize=16, color = 'gray')
             
-            
-            # MAA solutions
-            x, y = verticies[:,i],   verticies[:,j]
-            
-            # Set x and y as samples for this dimension
-            x_samples = samples[:,i]
-            y_samples = samples[:,j]
-            
-            # --------  Create 2D histogram --------------------
-            hist, xedges, yedges = np.histogram2d(x_samples, y_samples,
-                                                  bins = bins)
-    
-            # Create grid for pcolormesh
-            X, Y = np.meshgrid(xedges, yedges)
-            
-            # Create pcolormesh plot with square bins
-            ax.pcolormesh(X, Y, hist.T, cmap = 'Blues', zorder = 0)
-            
-            # Create patch to serve as hexbin label
-            hb = mpatches.Patch(color = 'tab:blue')
-            
             ax.grid('on')
             
-            # --------  Plot hull --------------------
-            hull = ConvexHull(verticies[:,[i,j]])
+            # -------- Create 2D histogram ------------------------------------
             
-            # plot simplexes
-            for simplex in hull.simplices:
-                l0, = ax.plot(verticies[simplex, i], verticies[simplex, j], '-', 
-                        color = 'silver', label = 'faces', zorder = 0)
-            
-            # list of legend handles and labels
-            l_list, l_labels   = [l0, hb], ['Polyhedron face', 'Sample density']
-            
-            if plot_MAA_points:
-                # Plot vertices from solutions
-                l1, = ax.plot(x, y,
-                          'o', label = "Near-optimal",
-                          color = 'lightcoral', zorder = 2)
-                l_list.append(l1)
-                l_labels.append('MAA points')
+            if samples is not None:
+                # Calculate 2D histogram data from samples for this dimension
+                hist, xedges, yedges = np.histogram2d(samples[:,i], samples[:,j],
+                                                      bins = bins)
+        
+                # Create meshgrid and plot pcolormesh with 2D hist data
+                X, Y = np.meshgrid(xedges, yedges)
+                ax.pcolormesh(X, Y, hist.T, cmap = 'Blues', zorder = 0)
                 
-                        
-            # optimal solutions
+                # Create patch to serve as handle for legend
+                hist_handle = mpatches.Patch(color = 'tab:blue')
+            
+            # -------- Plot hull ----------------------------------------------
+            if plot_boundary:
+                # Get 2D hull for dimension [i,j]
+                hull = ConvexHull(vertices[:,[i,j]])
+                
+                # Plot simplexes (edges)
+                for simplex in hull.simplices:
+                    face_handle = ax.plot(vertices[simplex, i], vertices[simplex, j],
+                                           '-', color = 'silver', label = 'faces', zorder = 0)
+        
+            # -------- Plot vertices ------------------------------------------
+            if plot_vertices:
+                # Vertices for this dimension
+                x, y = vertices[:,i],   vertices[:,j]
+                
+                # Plot vertices
+                vertices_handle, = ax.plot(x, y, 'o', label = "Near-optimal",
+                                           color = 'lightcoral', zorder = 2)
+                
+            # --------- Plot optimal system -----------------------------------
             if not opt_solution == None:
-                x_opt, y_opt = opt_solution[i],   opt_solution[j]
-                
-                # Plot optimal solutions
-                ax.scatter(x_opt, y_opt,
-                            marker = '*', 
-                            s = 1000, zorder = 4,
+                # Plot optimal solutions for this dimension
+                ax.scatter(opt_solution[i], opt_solution[j],
+                            marker = '*', s = 1000, zorder = 4,
                             linewidth = 2, alpha = 0.85,
                             facecolor = 'gold', edgecolor = 'darkorange',)
                 
-                l2 = Line2D([0], [0], marker = '*', color = 'gold',
+                opt_handle = Line2D([0], [0], marker = '*', color = 'gold',
                             markeredgecolor = 'darkorange', markeredgewidth = 2,
                             markersize = 25, label = 'Optimal Solutions',
                             linestyle = '',)
-                l2_2 = Line2D([0], [0], linestyle = '--', color = 'gold',
+                
+                opt_line_handle = Line2D([0], [0], linestyle = '--', color = 'gold',
                               gapcolor = 'darkorange', linewidth = 4,)
                 
-                l_list.append(l2)
-                l_labels.append('Optimal solution')
-                l_list.append(l2_2)
-                l_labels.append('Optimal line')
+            # --------- Plot chebyshev center ---------------------------------
+            if cheb_center is not None:
+                cheb_handle, = ax.plot(cheb_center[i], cheb_center[j],
+                              marker = 'o', linestyle = '',
+                              ms = 15, zorder = 3, color = 'red',)
                 
-            # Set limits
+                cheb_line_handle = Line2D([0], [0], linestyle = '--', 
+                                          color = 'red', linewidth = 2,)
+                
+            # --------- Set limits --------------------------------------------
             ax.set_xlim(xlim)
             ax.set_ylim(ylim)
             
+    # Construct legend --------------------------------------------------------
+    legend_handles, legend_labels = [], []
     
-    # Place legend below subplots
-    ax = axs[len(variables)-1, int(np.median([1,2,3]))-1] # Get center axis
+    if plot_boundary:
+        legend_handles += [face_handle]
+        legend_labels  += ['Polytope face']
     
-    legend_right = 1.1 if len(variables) == 4 else 0.5
+    if samples is not None:
+        legend_handles += [hist_handle]
+        legend_labels  += ['Sample density']
     
-    ax.legend(l_list,
-              l_labels, 
+    if opt_solution is not None:
+        legend_handles += [opt_handle, opt_line_handle]
+        legend_labels  += ['Optimal solution', 'Optimal line']
+    
+    if plot_vertices:
+        legend_handles += [vertices_handle]
+        legend_labels  += ['Vertices']
+        
+    if cheb_center is not None:
+        legend_handles += [cheb_handle, cheb_line_handle]
+        legend_labels  += ['Chebyshev center', 'Chebyshev line']
+    
+    # get central axis
+    ax = axs[len(variables)-1,
+             int(np.median(np.linspace(0, len(variables), len(variables)+1)))] # Get center axis
+      
+    # Place legend centrally below all plots
+    ax.legend(legend_handles, legend_labels, 
               loc = 'center', ncol = ncols,
-              bbox_to_anchor=(legend_right, -0.12*len(variables)), fancybox=False, shadow=False,)
+              bbox_to_anchor=(0.5, -0.1*len(variables)), fancybox=False, shadow=False,)
     
-    # fig.suptitle(title, fontsize = 24, y = 0.96)
-    
+    # Save to pdf if filename is given ----------------------------------------
     if not filename == None:
         fig.savefig(filename, format = 'pdf', bbox_inches='tight')
         
     plt.show()
         
+    return axs, fig
+
+def near_optimal_space_slice(all_variables, chosen_variables,
+                          vertices, samples,
+                          hist_bins = 50, density_bins = 50,
+                          title = 'Near-optimal space slice', cmap = 'Blues',
+                          xlabel = None, ylabel = None,
+                          opt_solution = None, cheb_center = None,
+                          filename = None,
+                 ):
+    # Take a multi-dimensional MAA polyhedron, and plot each "side" in 2D.
+    # Plot the polyhedron shape, samples within and correlations.
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from scipy.spatial import ConvexHull
+    import numpy as np
+    import matplotlib.patches as mpatches
+    from matplotlib.lines import Line2D
+    import seaborn as sns
+    
+    # -------- create dataframes to filter --------------------------
+    # Create dataframe from samples
+    samples_df = pd.DataFrame(samples, columns = all_variables)
+    
+    # Create solutions dataframe
+    solutions_df = pd.DataFrame(vertices, columns = all_variables)
+    
+    # -------- Set up plot ----------------------------------------
+    set_options()
+    
+    # Initialize and adjust figure
+    plt.figure()
+    
+    fig, axs = plt.subplots(1, 2, figsize = (20,5),
+                           gridspec_kw={'width_ratios': [1, 2]},
+                          )
+    fig.subplots_adjust(wspace = 0.2, hspace = 0.2)
+    fig.suptitle(title, fontsize = 24, y = 1.05)
+        
+    
+    axs[0].set_title('Near-optimal space', color = 'gray')
+    axs[1].set_title('Histograms', color = 'gray')
+    
+    axs[1].set_xlabel('Variable value', color = 'gray')
+    
+    axs[0].set(xlabel = chosen_variables[0], 
+               ylabel = chosen_variables[1])
+    
+    # Sns histplots - new axis --------------------------
+    
+    handles, labels = [], []
+    
+    ax = axs[1]
+    for variable in chosen_variables:
+        sns.histplot(samples_df[variable].values, 
+                     line_kws = {'linewidth': 3},
+                     element  = 'step',
+                     stat     = 'probability',
+                     alpha    = 1/3,
+                     bins     = hist_bins,
+                     kde      = True,
+                     ax       = ax,
+                     label    = variable,)
+        
+    ax.legend()
+    
+    # MAA Density plot - new axis --------------------------
+    handles, labels = [], []
+    
+    # Set x and y as samples for this dimension
+    x_samples = samples_df[chosen_variables[0]]
+    y_samples = samples_df[chosen_variables[1]]
+    
+    # --------  Create 2D histogram --------------------
+    hist, xedges, yedges = np.histogram2d(x_samples, y_samples,
+                                          bins = density_bins)
+
+    # Create grid for pcolormesh
+    X, Y = np.meshgrid(xedges, yedges)
+    
+    # Create pcolormesh plot with square bins
+    axs[0].pcolormesh(X, Y, hist.T, cmap = 'Blues', zorder = 0)
+    
+    # Create patch to serve as hexbin label
+    hb = mpatches.Patch(color = 'tab:blue')
+    
+    handles.append(hb)
+    labels.append('Sample density')
+    
+    axs[0].grid('on')
+    
+    # --------  Plot hull --------------------
+    hull = ConvexHull(solutions_df[[chosen_variables[0], chosen_variables[1]]].values)
+    
+    # plot simplexes
+    for simplex in hull.simplices:
+        l0, = axs[0].plot(solutions_df[chosen_variables[0]][simplex],
+                          solutions_df[chosen_variables[1]][simplex], '-', 
+                color = 'silver', label = 'faces', zorder = 0)
+        
+    handles.append(l0)
+    labels.append('Polytope boundary')
+    
+    # -------- opt system --------------------
+    #optimal solutions
+    if not opt_solution == None:
+        opt_df = pd.DataFrame(np.array([opt_solution]), columns = all_variables)
+        
+        x_opt, y_opt = opt_df[chosen_variables[0]].values,   opt_df[chosen_variables[1]].values
+        
+        # Plot optimal solutions
+        axs[0].scatter(x_opt, y_opt,
+                    marker = '*', 
+                    s = 1000, zorder = 4,
+                    linewidth = 2, alpha = 0.85,
+                    facecolor = 'gold', edgecolor = 'darkorange',)
+        
+        l2 = Line2D([0], [0], marker = '*', color = 'gold',
+                    markeredgecolor = 'darkorange', markeredgewidth = 2,
+                    markersize = 25, label = 'Optimal Solutions',
+                    linestyle = '',)
+        
+        handles.append(l2)
+        labels.append('Optimal solution')
+        
+    if cheb_center is not None:
+        cheb_df = pd.DataFrame(np.array([cheb_center]), columns = all_variables)
+        cheb_handle, = axs[0].plot(cheb_df[chosen_variables[0]], cheb_df[chosen_variables[1]],
+                      marker = 'o', linestyle = '',
+                      ms = 15, zorder = 3, color = 'red',)
+        
+        cheb_line_handle = Line2D([0], [0], linestyle = '--', 
+                                  color = 'red', linewidth = 2,)
+                
+    if cheb_center is not None:
+        handles += [cheb_handle, cheb_line_handle]
+        labels  += ['Chebyshev center', 'Chebyshev line']    
+    
+    axs[0].legend(handles, labels, loc = 'lower center',
+                  ncols = 2,
+                  bbox_to_anchor=(0.5, -0.2 - 0.05*len(handles)),)
+    axs[1].legend(loc = 'lower center',  ncols = 2,
+                  bbox_to_anchor=(0.5, -0.2 - 0.05*len(chosen_variables)))
+        
     return axs
+
