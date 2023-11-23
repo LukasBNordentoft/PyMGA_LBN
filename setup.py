@@ -1,11 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(name='PyMGA',
-      packages = ['PyMGA'],
       version='0.1.2',
       description='A Python library for Modeling All Alternatives',
       url='https://github.com/LukasBNordentoft/PyMGA_LBN',
-      download_url = 'https://github.com/LukasBNordentoft/PyMGA_LBN/archive/refs/tags/v0.1.1.tar.gz',
+      download_url = 'https://github.com/LukasBNordentoft/PyMGA_LBN/archive/refs/tags/v0.1.2.tar.gz',
       author='Tim Pedersen & Lukas B. Nordentoft',
       author_email='timtoernes@gmail.com & lukasBnordentoft@gmail.com',
       license='MIT',
