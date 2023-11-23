@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='PyMGA',
-      version='0.0.1',
+      version='0.0.2',
       description='A Python library from Modeling to Generate Alternatives methods',
       url='#',
       author='Tim Pedersen',
