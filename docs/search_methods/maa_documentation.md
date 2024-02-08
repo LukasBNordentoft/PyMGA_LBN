@@ -1,8 +1,8 @@
 ---
 layout: default
 title: MAA method
-parent: search_methods
-nav_order: 3
+parent: Search Methods
+nav_order: 2
 ---
 
 MAA docuentation
