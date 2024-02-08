@@ -1,7 +1,7 @@
 ---
 layout: default
-title: Typography
+title: General
 parent: Utilities
 ---
 
-# Typography Utilities
+# General
