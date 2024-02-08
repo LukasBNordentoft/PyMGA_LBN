@@ -1,8 +1,8 @@
 ---
 layout: default
-title: Buttons
+title: MAA method
 parent: search_methods
-nav_order: 2
+nav_order: 3
 ---
 
 MAA docuentation
