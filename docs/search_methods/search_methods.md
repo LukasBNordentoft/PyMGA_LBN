@@ -1,7 +1,7 @@
 ---
 layout: default
-title: Utilities
-nav_order: 4
+title: Search Methods
+nav_order: 2
 has_children: true
 permalink: docs/search_methods
 ---
